@@ -88,7 +88,7 @@ The result I obtain from this comparison is:
 
 
 
-STOGEN code descritpion
+STOGEN code description
 =======================
 
 - the stochastic modules
@@ -202,6 +202,85 @@ Interface with CROCO
 Example of stochastic fields
 ============================
 
+Edit the ``namelist_sto`` to modify the features of the stochastic fields:
 
+Time correlation
+----------------
+
+.. code-block:: text
+
+   stofields(jsto)%type_t='arn'  ! Use autorgeressive processes
+   stofields(jsto)%nar_order=2   ! of order 2
+   stofields(jsto)%corr_t=10.0   ! with a correlation time scale of 5 time steps
+   stofields(jsto)%nar_update=5  ! with update every 5 time steps (and interpolation inbetween)
+
+Other possibilities for ``type_t`` are ``white`` (default) and `constant`.
+
+The cost is proportional to ``nar_order`` (default=1). The cost decreases with ``nar_update`` (default=1), especially if the scheme to generate the spatially correlated noise is expensive.
+
+``nar_update`` should not be larger than ``corr_t``.
+
+Space correlation
+-----------------
+
+**with diffusive operator**
+
+.. code-block:: text
+
+   stofields(jsto)%type_xy='diffusive'  ! Use diffusive operator to obtain space correlation
+   stofields(jsto)%diff_passes=50       ! number of passes of the diffusion operator
+   stofields(jsto)%diff_type=1          ! type of diffusion operator (1=laplacian with mask)
+
+The cost is proportional to ``diff_passes``, and may become quite large.
+
+``diff_type=0`` : Laplcian diffusion without accounting for the land mask (default)
+``diff_type=1`` : the land mask boundary conditions are applied to the diffusion operator.
+
+**with kernel convolution**
+
+.. code-block:: text
+
+   stofields(jsto)%type_xy='kernel'     ! Use kernel convolution to obtain space correlation
+   stofields(jsto)%corr_xy=10.0         ! correlation length scale (in degrees, in spherical coordinates)
+   stofields(jsto)%ker_type=0           ! type of kernel (0=gaussian, default)
+   stofields(jsto)%ker_coord=2          ! type of grid coordinates (2=spherical coordinates)
+
+The type of kernel (`ker_type`) can be: Gaussian (0), Laplacian (1), Box kernel (2), Triangle kernel (3), Mexican hat wavelet (4), or Morlet wavelet (5).
+
+The type of grid coordinates can be: grid (0, default), Cartesian (1), spherical (2). Options 0 and 1 are much less expensive, but, if used on the sphere, the behaviour at the poles becomes grossly inconsistent and the periodicity conditions are lost.
+
+Marginal distribution
+---------------------
+
+.. code-block:: text
+
+   stofields(jsto)%type_variate='lognormal'   ! Use a lognormal marginal distribution
+   stofields(jsto)%ave=1.0                    ! with mean equal to 1.0
+   stofields(jsto)%std=0.5                    ! with standard deviation equal to 0.5
+
+Or
+
+.. code-block:: text
+
+   stofields(jsto%type_variate='bounded_atan' ! Use a bounded distribution with arctangent transformation
+   stofields(jsto)%min=0.                     ! with the lower bound equal to 0.
+   stofields(jsto)%max=1.                     ! with the upper lower bound equal to 1.
+   stofields(jsto)%ave=0.7                    ! with a transformed value of the normal mean equal to 0.7
+   stofields(jsto)%std=0.3                    ! with a measure of the spread around the mean equal to 0.3
+
+Currently available options are:
+
+- a bounded normal distribution: all values outside the bound are reset to the bound, with ``type_variate='normal'`` and two different values for ``min`` and ``max``;
+
+- a wrapped normal distribution, which is useful for cyclic variables (like angles), with ``type_variate='wrapped_normal'`` and two different values for ``min`` and ``max``;
+
+- a lognormal distribution, which is useful where positive random numbers are requested with ``type_variate='lognormal'`` and explicitly specified mean and standard deviation;
+
+- a bounded distribution in a given interval, which is here obtained by a transformation by the arctangent function, with ``type_variate='bounded_atan'``.
+
+
+
+ENSEMBLE code description
+=======================
 
 
