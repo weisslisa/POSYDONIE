@@ -61,7 +61,7 @@ Random number generator
 
 The code includes three random number generators (shr3, kiss32, and kiss64) and two algorithms to transform the integer pseudo-random sequence into Gaussian numbers (the polar method and the ziggurat method), all included in the modules ``storng_kiss`` and ``storng_ziggurat``. The default option is kiss32 with ziggurat, but the user is free to use any combination of them. Other random number generators can also easily be included. A tool to compare their computational performance is provided in module `storng_check`.
 
-The result I obtain from this comparison is:
+Result obtain from this comparison is:
 
 .. code-block:: text
 
