@@ -2,12 +2,18 @@
 Ensemble simulations and Stochastic processes
 =========================================================
 
+The ``croco/STOGEN`` directory contains modules to introduce stochastic parametrizations in CROCO.
+This includes the modules to generate stochastic processes with the required statistical properties, the interface with CROCO, and the stochastic parametrizations (described below in the "STOGEN code descritpion" section).
+
 To use the ensemble and stochastic modules in CROCO, define the following CPP keys in **cppdefs.h**:
 
 ================= ===============================================================
 STOGEN            Activate the option to generate stochastic processes
 ENSEMBLE          Activate the option to generate parallel ensemble simulations
 ================= ===============================================================
+
+Copy the namelist files ``namelist_sto_cfg`` and ``namelist_sto_ref`` in the running directory (from the ``croco/STOGEN`` directory).
+
 
 STOGEN presentation
 ===================
@@ -82,55 +88,18 @@ The result I obtain from this comparison is:
 
 
 
-Descritpion of the STOGEN code
-==============================
+STOGEN code descritpion
+=======================
 
-There are two kinds of modules:
+- the stochastic modules
+- the interface modules between STOGEN and CROCO
 
-- the external code, which mimics the time iteration of a geohysical model (like NEMO), and illustrates how to make requests to the stochastic modules;
-- the stochastic modules, which receive requests from the external code and produce the stochastic processes with the requested properties.
-
-External code
--------------
-
-- **stogen** : Main program with empty model illustrating the use of the stochastic modules, including:
-
-    - initialization of model parameters (grid, number of time steps, restart options),
-    - initialization of stochastic code (call to ``sto_mod_init``),
-    - a loop on time steps to update the stochastic fields (call to `sto_mod`) and store them in files (call to ``sto_write``).
-
-- **stomod** : Main stochastic module (model dependent), embedding all dynamical stochastic parameterizations:
-
-    - initialization phase (routine ``sto_mod_init``):
-
-      - initialization of every dynamical stochastic parameterizations (here only ``sto_template_init``),
-      - initialization of the structure of the stochastic arrays (call to ``sto_array_init``),
-      - initialization of the time iteration of the stochastic arrays (call to ``sto_par_init``);
-
-    - time update (routine ``sto_mod``):
-
-      - update stochastic fields (call to ``sto_par``),
-      - apply dynamical stochastic parameterization (call to ``sto_template``).
-
-    The routines may need to be organized differently depending on where the stochastic parameterization code must be used in the geohysical model.
-    
-- **stotemplate** : Template for including a new dynamical stochastic parameterization in the geohysical model. This illustrates how to make requests for stochastic fields with user-defined fetaures and how to use the resulting stochastic fields in the model.
-
-    - initialization phase (routine ``sto_template_init``):
-
-      - request index for a new stochastic field (call to ``sto_array_request_new``),
-      - define the features of the stochastic field with the corresponding index (by filling parameters like ``stofields(index)%type_xy`` specifying the requested type of xy correlation strcuture),
-
-    - time update (routine ``sto_template``):
-
-      - make use of the stochastic field in the model (``stofields(index)%sto2d``, ``stofields(index)%sto3d``, or ``stofields(index)%sto0d``, depending on the requested dimension of the stochastic field, stored in ``stofields(index)%dim``).
-
-- **stowrite** : Write the resulting stochastic fields in a NetCDF file.
-
-- **stoexternal** : This module is used by the stochastic modules below to get all information they need from the geohysical model: type of variables, description of the model grid,ensemble parameters, lateral boundary conditions (or connection between subdomains). This is the only place where model data go to the stochastic modules, so that this can be easily identified and possibly upgraded. This is model dependent.
 
 Stochastic modules
 ------------------
+
+These modules generate maps of stochastic processes with the requested statistical properties (time and space correlation, marginal distribution). 
+They are fully independant of CROCO and can follow updates of the stogen package without interference.
 
 - **stoarray** : This is the data module, where all stochastic fields are defined and stored:
 
@@ -174,9 +143,65 @@ Stochastic modules
 
 - **storng_ziggurat** : Random number generator. This includes the shr3 random number generator and the ziggurat method to transform the integer sequence into Gaussian numbers.
 
+
+Interface with CROCO
+--------------------
+
+- **stomod** : Main stochastic module (model dependent), embedding all dynamical stochastic parameterizations:
+
+    - initialization phase (routine ``sto_mod_init``):
+
+      - initialization of every dynamical stochastic parameterizations (here only ``sto_template_init``),
+      - initialization of the structure of the stochastic arrays (call to ``sto_array_init``),
+      - initialization of the time iteration of the stochastic arrays (call to ``sto_par_init``);
+
+    - time update (routine ``sto_mod``):
+
+      - update stochastic fields (call to ``sto_par``),
+      - apply dynamical stochastic parameterization (call to ``sto_template``).
+
+    The routines may need to be organized differently depending on where the stochastic parameterization code must be used in CROCO.
+
+- **stoexternal** : This module is used by the stochastic code to collect all information required from CROCO: type of variables, description of the model grid,ensemble parameters, lateral boundary conditions (or connection between subdomains). This is the only place where model data go to the stochastic modules, so that this can be easily identified and possibly upgraded. This is model dependent.
+
+
+
+
+    
+- **stotemplate** : Template for including a new dynamical stochastic parameterization in the geohysical model. This illustrates how to make requests for stochastic fields with user-defined fetaures and how to use the resulting stochastic fields in the model.
+
+    - initialization phase (routine ``sto_template_init``):
+
+      - request index for a new stochastic field (call to ``sto_array_request_new``),
+      - define the features of the stochastic field with the corresponding index (by filling parameters like ``stofields(index)%type_xy`` specifying the requested type of xy correlation strcuture),
+
+    - time update (routine ``sto_template``):
+
+      - make use of the stochastic field in the model (``stofields(index)%sto2d``, ``stofields(index)%sto3d``, or ``stofields(index)%sto0d``, depending on the requested dimension of the stochastic field, stored in ``stofields(index)%dim``).
+
+- **stowrite** : Write the resulting stochastic fields in a NetCDF file.
+
+
+
+
+
+- **stogen** : Main program with empty model illustrating the use of the stochastic modules, including:
+
+    - initialization of model parameters (grid, number of time steps, restart options),
+    - initialization of stochastic code (call to ``sto_mod_init``),
+    - a loop on time steps to update the stochastic fields (call to `sto_mod`) and store them in files (call to ``sto_write``).
+
+
+
 - **storng_check** : Check relative performance of random number generators.
 
 - **storst** : Read and write from restart file (not yet implemented).
+
+
+
+Example of stochastic fields
+============================
+
 
 
 
